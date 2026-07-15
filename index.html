@@ -12,8 +12,8 @@
     <div id="viewer"></div>
 
     <script type="module">
-        // Pakai esm.sh yang anti-CORS
-        import * as OBC from 'https://esm.sh/@thatopen/components@0.8.0';
+        // Kita panggil library tanpa versi spesifik biar otomatis pakai yang paling baru dan jalan
+        import * as OBC from 'https://esm.sh/@thatopen/components';
         
         const container = document.getElementById("viewer");
         const components = new OBC.Components();
@@ -28,23 +28,33 @@
         world.camera.controls.setLookAt(10, 10, 10, 0, 0, 0);
         world.scene.setup();
         
-        const fragments = components.get(OBC.FragmentsManager);
+        // Setup khusus pembaca IFC
+        const ifcLoader = components.get(OBC.IfcLoader);
+        await ifcLoader.setup();
+        ifcLoader.settings.wasm = {
+            path: "https://unpkg.com/web-ifc@latest/",
+            absolute: true
+        };
         
         async function loadIfc() {
             try {
-                // Pastikan nama file di repo GitHub kamu sudah jadi model.ifc
+                console.log("Mencoba memuat model.ifc...");
                 const response = await fetch("model.ifc");
                 
                 if (!response.ok) {
-                    throw new Error("File model.ifc gagal ditarik. Cek lagi nama filenya di GitHub ya!");
+                    throw new Error("File model.ifc tidak ditemukan!");
                 }
                 
                 const data = await response.arrayBuffer();
                 const buffer = new Uint8Array(data);
-                await fragments.load(buffer);
-                console.log("Model 3D berhasil dimuat! 🔥");
+                
+                // Load model dan masukkan ke dalam scene
+                const model = await ifcLoader.load(buffer);
+                world.scene.three.add(model);
+                
+                console.log("Mantap! Model 3D berhasil dimuat! 🔥");
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Yah error lagi:", error);
             }
         }
         
